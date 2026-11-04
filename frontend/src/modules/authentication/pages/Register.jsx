@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { registerUser } from '../../../services/authService';
 
 function Register() {
   const navigate = useNavigate();
@@ -11,18 +12,37 @@ function Register() {
     password: '',
     role: 'student'
   });
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
 
-    // Temporary navigation until backend integration
-    navigate('/verify-otp', {
-      state: { email: form.email }
-    });
+    try {
+      const result = await registerUser({
+        fullName: form.name,
+        email: form.email,
+        password: form.password,
+        role: form.role
+      });
+
+      navigate('/verify-otp', {
+        state: { email: form.email, userId: result.userId }
+      });
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+        'Could not create your account. Check that the backend is running.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -32,6 +52,8 @@ function Register() {
         <p className="text-center text-muted">
           Join our Job & Internship Portal
         </p>
+
+        {error && <div className="alert alert-danger" role="alert">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <input
@@ -75,8 +97,8 @@ function Register() {
             <option value="mentor">Mentor</option>
           </select>
 
-          <button className="btn btn-primary w-100">
-            Create Account
+          <button className="btn btn-primary w-100" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
 
